@@ -56,7 +56,7 @@ client.on('ready', async () => {
                 console.error(`an error occurred with the subreddit ${subreddit}`);
             }
         }
-    }, 1000);
+    }, 5000);
 });
 
 client.on('message', async (message) => {
@@ -65,10 +65,12 @@ client.on('message', async (message) => {
     for (let i = 0; i < subreddits.length; i++) {
         if (subreddit === subreddits[i]) {
             subreddits.splice(i, 1);
+            console.log(`removed ${subreddit}`);
             fs.writeFileSync('./subreddits.json', JSON.stringify(subreddits));
             return;
         }
     }
     subreddits.push(subreddit);
+    console.log(`added ${subreddit}`);
     fs.writeFileSync('./subreddits.json', JSON.stringify(subreddits));
 });
