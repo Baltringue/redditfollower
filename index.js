@@ -44,9 +44,11 @@ client.on('ready', async () => {
                         }
                         if (article.url.includes('redgifs')) {
                             const path = await redgifs(article.url, article.id, './redgifs/');
-                            channel.send({
+                            await channel.send({
                                 files: [path.HQ]
                             });
+                            fs.unlinkSync(path.HQ);
+                            fs.unlinkSync(path.LQ);
                         }
                     }
                 }
