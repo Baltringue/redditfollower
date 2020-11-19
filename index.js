@@ -19,7 +19,7 @@ client.login(process.env.TOKEN)
     .catch(console.error);
 
 client.on('ready', async () => {
-    const guild = await client.guilds.fetch('778867196096937995');
+    const guild = await client.guilds.fetch(process.env.GUILD);
     setInterval(async () => {
         for (const subreddit of subreddits) {
             try {
