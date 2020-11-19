@@ -44,6 +44,10 @@ client.on('ready', () => {
                                         })
                                             .catch(console.error);
                                     }
+                                    if (article.url.includes('.gif')) {
+                                        channel.send(article.url)
+                                            .catch(console.error);
+                                    }
                                     if (article.url.includes('redgifs')) {
                                         redgifs(article.url, article.id, './redgifs/')
                                             .then(path => {
