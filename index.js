@@ -1,8 +1,10 @@
-require('dotenv').config();
+const dotenv = require('dotenv');
 const Reddit = require('reddit');
 const Discord = require('discord.js');
 const redgifs = require('redgif-dl');
 const fs = require('fs');
+
+dotenv.config();
 
 const client = new Discord.Client();
 const reddit = new Reddit({
@@ -15,77 +17,48 @@ const reddit = new Reddit({
 const articles = JSON.parse(fs.readFileSync('./articles.json', 'utf-8'));
 const subreddits = JSON.parse(fs.readFileSync('./subreddits.json', 'utf-8'));
 
-client.login(process.env.TOKEN)
-    .catch(console.error);
+client.login(process.env.TOKEN).catch(console.error);
 
-client.on('ready', () => {
-    client.guilds.fetch(process.env.GUILD)
-        .then(guild => {
-            setInterval(() => {
-                for (const subreddit of subreddits) {
-                    reddit.get(`/r/${subreddit}/hot`)
-                        .then(response => {
-                            let channel = client.channels.cache.find(channel => channel.name === subreddit.toLowerCase());
-                            if (!channel) {
-                                guild.channels.create(subreddit)
-                                    .then(textChannel => {
-                                        channel = textChannel;
-                                    })
-                                    .catch(console.error)
-                            }
-                            for (const children of response.data.children) {
-                                const article = children.data;
-                                if (!articles[article.id]) {
-                                    articles[article.id] = true;
-                                    fs.writeFileSync('./articles.json', JSON.stringify(articles));
-                                    if (article.url.includes('.jpg') || article.url.includes('.jpeg') || article.url.includes('.png')) {
-                                        channel.send({
-                                            files: [article.url]
-                                        })
-                                            .catch(console.error);
-                                    }
-                                    if (article.url.includes('.gif')) {
-                                        channel.send(article.url)
-                                            .catch(console.error);
-                                    }
-                                    if (article.url.includes('redgifs')) {
-                                        redgifs(article.url, article.id, './redgifs/')
-                                            .then(path => {
-                                                channel.send({
-                                                    files: [path.HQ]
-                                                })
-                                                    .then(() => {
-                                                        fs.unlinkSync(path.HQ);
-                                                        fs.unlinkSync(path.LQ);
-                                                    })
-                                                    .catch(error => {
-                                                        switch (error.code) {
-                                                            case '40005':
-                                                                channel.send({
-                                                                    files: [path.LQ]
-                                                                })
-                                                                    .catch(console.error);
-                                                                break;
-                                                            default:
-                                                                fs.unlinkSync(path.HQ);
-                                                                fs.unlinkSync(path.LQ);
-                                                                break;
-                                                        }
-                                                    });
-                                            })
-                                            .catch(console.error);
-                                    }
-                                }
-                            }
-                        })
-                        .catch(console.error);
+client.on('ready', async () => {
+    const guild = await client.guilds.fetch(process.env.GUILD).catch(console.error);
+
+    setInterval(async () => {
+        for (const subreddit of subreddits) {
+            const response = await reddit.get(`/r/${subreddit}/hot`).catch(console.error);
+            let channel = client.channels.cache.find(channel => channel.name === subreddit.toLowerCase());
+
+            if (!channel) {
+                channel = await guild.channels.create(subreddit).catch(console.error);
+            }
+
+            for (const children of response.data.children) {
+                const article = children.data;
+
+                if (!articles[article.id]) {
+                    articles[article.id] = true;
+                    fs.writeFileSync('./articles.json', JSON.stringify(articles));
+
+                    if (article.url.includes('.jpg') || article.url.includes('.jpeg') || article.url.includes('.png')) {
+                        channel.send({ files: [article.url] }).catch(console.error);
+                    }
+
+                    if (article.url.includes('.gif')) {
+                        channel.send(article.url).catch(console.error);
+                    }
+
+                    if (article.url.includes('redgifs')) {
+                        const path = await redgifs(article.url, article.id, './redgifs/').catch(console.error);
+                        await channel.send({ files: [path.HQ] }).catch(console.error);
+                        fs.unlinkSync(path.HQ);
+                        fs.unlinkSync(path.LQ);
+                    }
                 }
-            }, 5000);
-        })
-        .catch(console.error);
+            }
+        }
+    }, 5000);
 });
 
-client.on('message', (message) => {
+client.on('message', async (message) => {
     if (message.author.bot) return;
 
     const subreddit = message.content;
@@ -94,7 +67,8 @@ client.on('message', (message) => {
         if (subreddit === subreddits[i]) {
             subreddits.splice(i, 1);
             console.log(`removed ${subreddit}`);
-            return fs.writeFileSync('./subreddits.json', JSON.stringify(subreddits));
+            fs.writeFileSync('./subreddits.json', JSON.stringify(subreddits));
+            return;
         }
     }
 
