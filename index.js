@@ -48,7 +48,18 @@ client.on('ready', async () => {
 
                     if (article.url.includes('redgifs')) {
                         const path = await redgifs(article.url, article.id, './redgifs/').catch(console.error);
-                        await channel.send({ files: [path.HQ] }).catch(console.error);
+                        await channel.send({ files: [path.HQ] })
+                            .catch(async (error) => {
+                                switch (error.code) {
+                                    case '40005':
+                                        channel.send(path.LQ).catch(console.error);
+                                        break;
+                                    default:
+                                        console.error(error);
+                                        break;
+                                }
+                            });
+
                         fs.unlinkSync(path.HQ);
                         fs.unlinkSync(path.LQ);
                     }
