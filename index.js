@@ -27,46 +27,50 @@ client.on('ready', async () => {
     setInterval(async () => {
         for (const subreddit of subreddits) {
             for (const type of types) {
-                const response = await reddit.get(`/r/${subreddit}/${type}`).catch(console.error);
-                let channel = client.channels.cache.find(channel => channel.name === subreddit.toLowerCase());
+                try {
+                    const response = await reddit.get(`/r/${subreddit}/${type}`).catch(console.error);
+                    let channel = client.channels.cache.find(channel => channel.name === subreddit.toLowerCase());
 
-                if (!channel) {
-                    channel = await guild.channels.create(subreddit).catch(console.error);
-                }
+                    if (!channel) {
+                        channel = await guild.channels.create(subreddit).catch(console.error);
+                    }
 
-                for (const children of response.data.children) {
-                    const article = children.data;
+                    for (const children of response.data.children) {
+                        const article = children.data;
 
-                    if (!articles[article.id]) {
-                        articles[article.id] = true;
-                        fs.writeFileSync('./articles.json', JSON.stringify(articles));
+                        if (!articles[article.id]) {
+                            articles[article.id] = true;
+                            fs.writeFileSync('./articles.json', JSON.stringify(articles));
 
-                        if (article.url.includes('.jpg') || article.url.includes('.jpeg') || article.url.includes('.png')) {
-                            channel.send({ files: [article.url] }).catch(console.error);
-                        }
+                            if (article.url.includes('.jpg') || article.url.includes('.jpeg') || article.url.includes('.png')) {
+                                channel.send({files: [article.url]}).catch(console.error);
+                            }
 
-                        if (article.url.includes('.gif')) {
-                            channel.send(article.url).catch(console.error);
-                        }
+                            if (article.url.includes('.gif')) {
+                                channel.send(article.url).catch(console.error);
+                            }
 
-                        if (article.url.includes('redgifs')) {
-                            const path = await redgifs(article.url, article.id, './redgifs/').catch(console.error);
-                            await channel.send({ files: [path.HQ] })
-                                .catch(async (error) => {
-                                    switch (error.code) {
-                                        case '40005':
-                                            channel.send(path.LQ).catch(console.error);
-                                            break;
-                                        default:
-                                            console.error(error);
-                                            break;
-                                    }
-                                });
+                            if (article.url.includes('redgifs')) {
+                                const path = await redgifs(article.url, article.id, './redgifs/').catch(console.error);
+                                await channel.send({files: [path.HQ]})
+                                    .catch(async (error) => {
+                                        switch (error.code) {
+                                            case '40005':
+                                                channel.send(path.LQ).catch(console.error);
+                                                break;
+                                            default:
+                                                console.error(error);
+                                                break;
+                                        }
+                                    });
 
-                            fs.unlinkSync(path.HQ);
-                            fs.unlinkSync(path.LQ);
+                                fs.unlinkSync(path.HQ);
+                                fs.unlinkSync(path.LQ);
+                            }
                         }
                     }
+                } catch (error) {
+                    console.error(error);
                 }
             }
         }
